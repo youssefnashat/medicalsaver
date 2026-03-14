@@ -1,16 +1,29 @@
-// TODO: Place an outbound 911 call via Twilio Voice API
-//
-// Flow:
-//   1. Create a Twilio call from TWILIO_FROM_NUMBER to TWILIO_TO_NUMBER (911 or test)
-//   2. Set the call's url to our /api/twiml endpoint (Twilio fetches this on connect)
-//   3. Return the callSid for tracking
-//
-// Notes:
-//   - Store { callSid -> script } in memory or Redis so /api/twiml can look it up
-//   - For testing, use a Twilio test number instead of 911
-//   - The backend must be publicly reachable by Twilio (use ngrok in dev)
+import twilio from "twilio";
 
-export async function placeCall(callSid: string, twimlUrl: string): Promise<string> {
-  // TODO: implement using twilio npm package
-  throw new Error("Not implemented");
+function getClient() {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+
+  if (!sid || !token) {
+    throw new Error("Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN");
+  }
+
+  return twilio(sid, token);
+}
+
+// Places an outbound call via Twilio.
+// twimlUrl must be a publicly reachable URL that returns TwiML XML.
+// Twilio fetches it when the call connects and follows its instructions.
+// Returns the Twilio call SID.
+export async function placeCall(twimlUrl: string): Promise<string> {
+  const client = getClient();
+  const from = process.env.TWILIO_FROM_NUMBER;
+  const to = process.env.TWILIO_TO_NUMBER;
+
+  if (!from || !to) {
+    throw new Error("Missing TWILIO_FROM_NUMBER or TWILIO_TO_NUMBER");
+  }
+
+  const call = await client.calls.create({ from, to, url: twimlUrl });
+  return call.sid;
 }

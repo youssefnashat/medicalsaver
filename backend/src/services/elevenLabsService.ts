@@ -1,21 +1,36 @@
-// TODO: Convert the generated script to audio using ElevenLabs TTS
-//
-// Input:  script: string
-// Output: audioUrl: string  (publicly accessible URL Twilio can stream)
-//
-// Options:
-//   A) Call ElevenLabs API → get back audio buffer → upload to temp storage → return URL
-//   B) Use ElevenLabs streaming and pipe directly into Twilio <Stream>
-//
-// Recommended approach for simplicity:
-//   - POST to ElevenLabs /v1/text-to-speech/{voice_id}
-//   - Write to a temp file or buffer
-//   - Serve it from the backend as a static file (GET /audio/:callSid.mp3)
-//   - Pass that URL to TwiML <Play>
-//
-// Voice should be calm, clear, and authoritative (English)
+export async function generateAudio(script: string): Promise<Buffer> {
+  const voiceId = process.env.ELEVENLABS_VOICE_ID;
+  const apiKey = process.env.ELEVENLABS_API_KEY;
 
-export async function generateAudio(script: string, callSid: string): Promise<string> {
-  // TODO: implement — returns a URL to the generated audio
-  throw new Error("Not implemented");
+  if (!voiceId || !apiKey) {
+    throw new Error("Missing ELEVENLABS_VOICE_ID or ELEVENLABS_API_KEY");
+  }
+
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+        Accept: "audio/mpeg",
+      },
+      body: JSON.stringify({
+        text: script,
+        model_id: "eleven_monolingual_v1",
+        voice_settings: {
+          stability: 0.75,
+          similarity_boost: 0.75,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`ElevenLabs error ${response.status}: ${body}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }
