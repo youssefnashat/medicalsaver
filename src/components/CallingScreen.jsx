@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Ripple } from './ui/ripple'
 import { emergencyConfig, generateDispatchPhrase } from '../emergencyQuizLogic'
+import { getBodySummary } from './BodySelector'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000'
 
@@ -11,7 +12,10 @@ const statusSteps = ['Connecting...', 'Reaching dispatch...', 'Line secured', 'C
 
 export default function CallingScreen({ type, answers, address, coords, onConfirm, onBack }) {
   const config = emergencyConfig[type]
-  const phrase = generateDispatchPhrase(type, answers)
+  const { bodySelections, ...quizAnswers } = answers
+  const basePhrase = generateDispatchPhrase(type, quizAnswers)
+  const bodySummary = bodySelections ? getBodySummary(bodySelections) : ''
+  const phrase = bodySummary ? `${basePhrase} ${bodySummary}` : basePhrase
 
   const [statusIdx, setStatusIdx] = useState(0)
   const [showPhrase, setShowPhrase] = useState(false)
