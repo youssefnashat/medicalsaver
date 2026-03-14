@@ -36,23 +36,13 @@ export const emergencyConfig = {
     dispatchPrefix: 'MEDICAL DISPATCH',
     questions: [
       {
-        id: 'condition',
-        text: 'What is the emergency?',
+        id: 'symptoms',
+        text: 'What is happening?',
         options: [
-          { emoji: '💔', label: 'Chest pain', value: 'chest' },
-          { emoji: '🩸', label: 'Injury / bleeding', value: 'injury' },
           { emoji: '😵', label: 'Unconscious', value: 'unconscious' },
           { emoji: '🤒', label: 'Serious illness', value: 'illness' },
-        ],
-      },
-      {
-        id: 'breathing',
-        text: 'Is the person breathing?',
-        options: [
-          { emoji: '✅', label: 'Yes, breathing', value: 'yes' },
-          { emoji: '❌', label: 'Not breathing', value: 'no' },
-          { emoji: '😰', label: 'Struggling', value: 'struggling' },
-          { emoji: '🤷', label: "Can't tell", value: 'unknown' },
+          { emoji: '✅', label: 'Yes', value: 'breathing_yes' },
+          { emoji: '❌', label: 'No', value: 'breathing_no' },
         ],
       },
     ],
@@ -116,18 +106,6 @@ const dispatchPhrases = {
     },
   },
   medical: {
-    chest: {
-      yes: 'Chest pain reported — patient is conscious and breathing.',
-      no: 'CRITICAL: Chest pain, patient is NOT breathing. CPR may be needed.',
-      struggling: 'Chest pain with severe breathing difficulty.',
-      unknown: 'Chest pain reported. Breathing status unclear.',
-    },
-    injury: {
-      yes: 'Injury and bleeding reported — patient is conscious.',
-      no: 'CRITICAL: Injury with suspected respiratory arrest.',
-      struggling: 'Injury with breathing difficulty reported.',
-      unknown: 'Injury reported. Bleeding and breathing status unclear.',
-    },
     unconscious: {
       yes: 'Unconscious person — breathing confirmed.',
       no: 'CRITICAL: Unconscious person NOT breathing. Immediate response required.',
@@ -139,6 +117,12 @@ const dispatchPhrases = {
       no: 'CRITICAL: Serious illness with no breathing detected.',
       struggling: 'Severe illness with breathing difficulty.',
       unknown: 'Serious illness reported. Condition unclear.',
+    },
+    choking: {
+      yes: 'Choking reported — patient is partially breathing.',
+      no: 'CRITICAL: Choking — patient is NOT breathing. Airway fully blocked.',
+      struggling: 'Choking with severe breathing difficulty. Airway partially blocked.',
+      unknown: 'Choking reported. Breathing status unclear.',
     },
   },
   fire: {
@@ -170,6 +154,24 @@ const dispatchPhrases = {
 }
 
 export function generateDispatchPhrase(type, answers) {
+  const config = emergencyConfig[type]
+
+  // Medical uses multi-select symptoms array
+  if (type === 'medical') {
+    const symptoms = answers.symptoms ?? []
+    const labels = {
+      unconscious: 'unconscious patient',
+      illness: 'serious illness',
+      breathing_yes: 'breathing confirmed',
+      breathing_no: 'NOT breathing — may require CPR',
+    }
+    const desc = symptoms.length
+      ? symptoms.map(s => labels[s] || s).join(', ')
+      : 'medical emergency'
+    return `${config.dispatchPrefix}: Patient presenting with ${desc}. Location being confirmed. Caller requires immediate assistance.`
+  }
+
+  // Police / fire — lookup table
   const q1Key = Object.keys(answers)[0]
   const q2Key = Object.keys(answers)[1]
   const q1Val = answers[q1Key]
@@ -179,6 +181,5 @@ export function generateDispatchPhrase(type, answers) {
   const core = phraseMap?.[q1Val]?.[q2Val]
     ?? `Emergency situation requiring immediate ${type} response.`
 
-  const config = emergencyConfig[type]
   return `${config.dispatchPrefix}: ${core} Location being confirmed. Caller requires immediate assistance.`
 }
